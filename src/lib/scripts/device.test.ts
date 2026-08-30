@@ -143,6 +143,49 @@ describe('Device hardware event subscriptions', () => {
 		expect(cb).toHaveBeenCalledTimes(1);
 	});
 
+	it('clearAllEvents actually unsubscribes what onEvent registered', () => {
+		// Régression : `onEvent` renvoyait l'identifiant du handler sans le
+		// ranger, si bien que `clearAllEvents()` n'avait rien à retirer. Tout jeu
+		// qui recâblait ses manettes empilait un écouteur de plus par étape, et un
+		// seul appui comptait autant de fois qu'il y avait d'écouteurs.
+		const mock = makeMockConsole();
+		const d = new Device(asConsole(mock), 'aa');
+		const cb = vi.fn();
+		d.onEvent('press', cb);
+		d.clearAllEvents();
+
+		mock.trigger.deviceEvent('dev', 'aa', 'press');
+		expect(cb).not.toHaveBeenCalled();
+	});
+
+	it('re-subscribing after clearAllEvents does not stack listeners', () => {
+		const mock = makeMockConsole();
+		const d = new Device(asConsole(mock), 'aa');
+		const cb = vi.fn();
+		d.onEvent('press', cb);
+		d.clearAllEvents();
+		d.onEvent('press', cb);
+
+		mock.trigger.deviceEvent('dev', 'aa', 'press');
+		expect(cb).toHaveBeenCalledTimes(1);
+	});
+
+	it('attachEvent is sent once per event name, not on every subscription', () => {
+		// Régression : `event in tableau` teste un INDEX, jamais une valeur — la
+		// requête repartait à chaque abonnement et la console empile une paire
+		// événement/pair par réception, sans dédoublonner.
+		const mock = makeMockConsole();
+		const d = new Device(asConsole(mock), 'aa');
+		d.onEvent('press', vi.fn());
+		d.onEvent('press', vi.fn());
+		d.onEvent('release', vi.fn());
+
+		const attached = mock
+			.sentWithExec('attachEvent')
+			.map((message) => message.request.params.event);
+		expect(attached).toEqual(['press', 'release']);
+	});
+
 	it('onCursor enables the module and forwards coordinates for its address', () => {
 		const mock = makeMockConsole();
 		const d = new Device(asConsole(mock), 'aa');

@@ -79,7 +79,13 @@ export class Device {
                 callback();
             }
         };
-        return this._console.onDeviceEvent(consoleEvent);
+        const callbackId = this._console.onDeviceEvent(consoleEvent);
+        // Sans cette ligne, l'identifiant se perdait aussitôt créé et
+        // `clearEvent`/`clearAllEvents` ne pouvaient RIEN retirer : un jeu qui
+        // recâblait ses manettes empilait un écouteur de plus à chaque fois, et
+        // un seul appui finissait par compter deux, trois, quatre fois.
+        this._eventsIds.push(callbackId);
+        return callbackId;
     }
 
     /**
@@ -186,7 +192,10 @@ export class Device {
      * @param event The event name to attach.
      */
     private _attachEvent(event: string) {
-        if (!(event in this._attachedEvents)) {
+        // `in` sur un tableau teste un INDEX, pas une valeur : la condition
+        // était vraie pour 0, 1, 2… et fausse pour "buzz". La requête repartait
+        // donc à chaque abonnement, et la console empile une paire par réception.
+        if (!this._attachedEvents.includes(event)) {
             let request = new Message();
             request.addParam("event", event);
             request.setDestination(PeerType.DEVICE, this._address);
@@ -323,6 +332,7 @@ export class Device {
         for (let callbackId of this._callbackIds) {
             this.clearCallback(callbackId);
         }
+        this._callbackIds = [];
     }
 
     public clearEvent(eventId: string) {
@@ -333,8 +343,9 @@ export class Device {
 
     public clearAllEvents() {
         for (let eventId of this._eventsIds) {
-            this.clearCallback(eventId);
+            this.clearEvent(eventId);
         }
+        this._eventsIds = [];
     }
 
     /**

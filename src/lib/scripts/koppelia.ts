@@ -165,10 +165,20 @@ export class Koppelia {
 
     /**
      * Completely overwrites the global state with a new state object.
+     *
      * @param newState The new state object to apply.
+     * @param force Broadcast the WHOLE state instead of the computed diff.
+     *
+     * The diff is computed against the last value this peer saw — including the
+     * echo of its own publications, which the console sends back to everyone.
+     * A game publishing faster than the round-trip can therefore write A, then
+     * B, then A again, and see that last change diff to nothing and never
+     * leave: the other peers stay on B for good. A monitor that owns the state
+     * and publishes at a high rate should force. Costs the size of the state,
+     * saves a divergence that never repairs itself.
      */
-    public setState(newState: AnyState) {
-        this._state.setState(newState);
+    public setState(newState: AnyState, force: boolean = false) {
+        this._state.setState(newState, force);
     }
 
     /**

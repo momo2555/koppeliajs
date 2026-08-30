@@ -63,6 +63,16 @@ describe('Koppelia media + state', () => {
 		expect(get(k.state)).toMatchObject({ a: 1 });
 	});
 
+	it('setState can force a full broadcast instead of a diff', () => {
+		// Le diff est calculé contre la dernière valeur VUE, écho compris : un
+		// A→B→A plus rapide que l'aller-retour se diffait à « rien » et ne
+		// partait jamais, laissant les autres pairs sur B pour de bon.
+		const k = Koppelia.instance;
+		k.updateState({ a: 1 });
+		k.setState({ a: 1, b: 2 }, true);
+		expect(get(k.state)).toMatchObject({ a: 1, b: 2 });
+	});
+
 	it('setState overwrites the shared store', () => {
 		const k = Koppelia.instance;
 		k.updateState({ a: 1 });

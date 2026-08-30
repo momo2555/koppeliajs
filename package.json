@@ -1,6 +1,6 @@
 {
 	"name": "@koppelia/koppeliajs",
-	"version": "1.8.1",
+	"version": "1.8.2",
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/Koppelia/koppeliajs.git"
